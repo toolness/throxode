@@ -1,5 +1,15 @@
 var http = require('http');
 
+const DEFAULT_PORTS = {
+  "http:": 80,
+  "https:": 443
+};
+
+const PROXY = {
+  host: "127.0.0.1",
+  port: 8080
+};
+
 var throttleInfo = {
   bytes: {
     downstream: 0,
@@ -95,11 +105,6 @@ function filterHeaders(raw) {
   return headers;
 }
 
-var DEFAULT_PORTS = {
-  "http:": 80,
-  "https:": 443
-};
-
 http.createServer(function(browserReq, browserRes) {
   var uri = require("url").parse(browserReq.url);
   if (uri.port == undefined)
@@ -121,4 +126,6 @@ http.createServer(function(browserReq, browserRes) {
       throxy(name, 'downstream', serverRes, browserRes);
     });
   });
-}).listen(8080, "127.0.0.1");
+}).listen(PROXY.port, PROXY.host);
+
+console.log("HTTP proxy running on ", PROXY.host, "port", PROXY.port);
