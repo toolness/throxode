@@ -99,7 +99,9 @@ function filterHeaders(raw) {
   var headers = {};
 
   for (name in raw)
-    if (!/^(proxy-|keep-alive|connection)/.test(name))
+    // get rid of some stuff that triggers behaviors that we as a proxy 
+    // don't know how to deal with.
+    if (!/^(proxy-|keep-alive|connection|accept-encoding)/.test(name))
       headers[name] = raw[name];
 
   return headers;
