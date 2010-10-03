@@ -26,7 +26,7 @@ function throxy(name, type, sourceStream, destStream, cb) {
     console.log.apply(console, args);
   }
 
-  function onSourceData(chunk) {
+  sourceStream.on('data', function onSourceData(chunk) {
     var startSlice = 0;
 
     function wait() {
@@ -62,7 +62,7 @@ function throxy(name, type, sourceStream, destStream, cb) {
     }
 
     push();
-  };
+  });
 
   function finish() {
     destStream.end();
@@ -70,24 +70,20 @@ function throxy(name, type, sourceStream, destStream, cb) {
       cb();
   }
 
-  function onSourceEnd() {
+  sourceStream.on('end', function onSourceEnd() {
     expectMoreData = false;
     if (!paused)
       finish();
-  };
-
-  sourceStream.on('data', onSourceData);
-  sourceStream.on('end', onSourceEnd);
+  });
 }
 
 setInterval(function() {
-              throttleInfo.bytes.downstream = 0;
-              throttleInfo.bytes.upstream = 0;
-              var cbs = throttleInfo.onNextTick;
-              throttleInfo.onNextTick = [];
-              cbs.forEach(function(cb) { cb(); });
-            },
-            1000);
+  throttleInfo.bytes.downstream = 0;
+  throttleInfo.bytes.upstream = 0;
+  var cbs = throttleInfo.onNextTick;
+  throttleInfo.onNextTick = [];
+  cbs.forEach(function(cb) { cb(); });
+}, 1000);
 
 function filterHeaders(raw) {
   var headers = {};
@@ -104,29 +100,25 @@ var DEFAULT_PORTS = {
   "https:": 443
 };
 
-http.createServer(
-  function(browserReq, browserRes) {
-    var uri = require("url").parse(browserReq.url);
-    if (uri.port == undefined)
-      uri.port = DEFAULT_PORTS[uri.protocol];
-    var pathname = uri.search ? uri.pathname + uri.search : uri.pathname;
-    var server = http.createClient(uri.port, uri.hostname);
-    var name = browserReq.method + " " + browserReq.url;
-    console.log(name);
+http.createServer(function(browserReq, browserRes) {
+  var uri = require("url").parse(browserReq.url);
+  if (uri.port == undefined)
+    uri.port = DEFAULT_PORTS[uri.protocol];
+  var pathname = uri.search ? uri.pathname + uri.search : uri.pathname;
+  var server = http.createClient(uri.port, uri.hostname);
+  var name = browserReq.method + " " + browserReq.url;
 
-    var serverReq = server.request(browserReq.method,
-                                   pathname,
-                                   filterHeaders(browserReq.headers));
+  console.log(name);
 
-    throxy(
-      name, 'upstream', browserReq, serverReq,
-      function onRequestBodySent() {
-        serverReq.on(
-          'response',
-          function(serverRes) {
-            browserRes.writeHead(serverRes.statusCode,
-                                 filterHeaders(serverRes.headers));
-            throxy(name, 'downstream', serverRes, browserRes);
-          });
-      });
-  }).listen(8080, "127.0.0.1");
+  var serverReq = server.request(browserReq.method,
+                                 pathname,
+                                 filterHeaders(browserReq.headers));
+
+  throxy(name, 'upstream', browserReq, serverReq, function onReqBodySent() {
+    serverReq.on('response', function(serverRes) {
+      browserRes.writeHead(serverRes.statusCode,
+                           filterHeaders(serverRes.headers));
+      throxy(name, 'downstream', serverRes, browserRes);
+    });
+  });
+}).listen(8080, "127.0.0.1");
