@@ -92,7 +92,14 @@ setInterval(function() {
   throttleInfo.bytes.upstream = 0;
   var cbs = throttleInfo.onNextTick;
   throttleInfo.onNextTick = [];
-  cbs.forEach(function(cb) { cb(); });
+  cbs.forEach(function(cb) {
+    try {
+      cb();
+    } catch (e) {
+      console.log("Error while throttling");
+      console.log(e.stack);
+    }
+  });
 }, 1000);
 
 function filterHeaders(raw) {
@@ -107,10 +114,6 @@ function filterHeaders(raw) {
   return headers;
 }
 
-function errorHandler(ex) {
-  console.log("error handler called; exception: " + ex);
-}
-
 http.createServer(function(browserReq, browserRes) {
   var uri = require("url").parse(browserReq.url);
   if (uri.port == undefined)
@@ -119,7 +122,11 @@ http.createServer(function(browserReq, browserRes) {
   var server = http.createClient(uri.port, uri.hostname);
   var name = browserReq.method + " " + browserReq.url;
 
-  server.addListener('error', errorHandler)
+  server.addListener('error', function(ex) {
+    console.log("Error in " + name);
+    console.log(ex.stack);
+  });
+
   console.log(name);
 
   var serverReq = server.request(browserReq.method,
