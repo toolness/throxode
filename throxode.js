@@ -105,6 +105,10 @@ function filterHeaders(raw) {
   return headers;
 }
 
+function errorHandler(ex) {
+  console.log("error handler called; exception: " + ex);
+}
+
 http.createServer(function(browserReq, browserRes) {
   var uri = require("url").parse(browserReq.url);
   if (uri.port == undefined)
@@ -113,6 +117,7 @@ http.createServer(function(browserReq, browserRes) {
   var server = http.createClient(uri.port, uri.hostname);
   var name = browserReq.method + " " + browserReq.url;
 
+  server.addListener('error', errorHandler)
   console.log(name);
 
   var serverReq = server.request(browserReq.method,
