@@ -99,21 +99,23 @@ function filterHeaders(raw) {
   return headers;
 }
 
+var DEFAULT_PORTS = {
+  "http:": 80,
+  "https:": 443
+};
+
 http.createServer(
   function(browserReq, browserRes) {
-    var host = browserReq.headers.host;
-    var port = 80;
-    var hostPortMatch = host.match(/^(.*):([0-9]+)$/);
-    if (hostPortMatch) {
-      host = hostPortMatch[1];
-      port = parseInt(hostPortMatch[2]);
-    }
-    var server = http.createClient(port, host);
+    var uri = require("url").parse(browserReq.url);
+    if (uri.port == undefined)
+      uri.port = DEFAULT_PORTS[uri.protocol];
+    var pathname = uri.search ? uri.pathname + uri.search : uri.pathname;
+    var server = http.createClient(uri.port, uri.hostname);
     var name = browserReq.method + " " + browserReq.url;
     console.log(name);
 
     var serverReq = server.request(browserReq.method,
-                                   browserReq.url,
+                                   pathname,
                                    filterHeaders(browserReq.headers));
 
     throxy(
